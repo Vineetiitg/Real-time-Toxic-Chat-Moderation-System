@@ -1,0 +1,17 @@
+--index-url https://download.pytorch.org/whl/cu124
+torch
+torchvision
+torchaudio
+transformers
+peft
+accelerate
+fastapi
+uvicorn
+gradio
+scikit-learn
+pandas
+numpy
+tqdm
+langdetect
+sentencepiece
+protobuf

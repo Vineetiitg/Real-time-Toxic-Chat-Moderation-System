@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environment
+.venv/
+venv/
+env/
+
+# IDEs
+.idea/
+.vscode/
+
+# Logs
+*.log
+logs/
+
+# Checkpoints (training artifacts usually not needed for inference)
+temp_checkpoints/
+
+# Gradio
+.gradio/
