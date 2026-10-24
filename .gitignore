@@ -18,6 +18,28 @@ logs/
 
 # Checkpoints (training artifacts usually not needed for inference)
 temp_checkpoints/
+ml-service/checkpoints/
+*.safetensors
+*.bin
+*.pt
 
 # Gradio
 .gradio/
+
+# Data Pipeline — raw downloads and processed CSVs (large files, reproducible via script)
+data_pipeline/raw/
+data_pipeline/processed/
+data_pipeline/splits/*.csv
+
+# Keep reports and pipeline code (small, reviewable)
+!data_pipeline/reports/
+!data_pipeline/splits/split_report.json
+
+# Node & Frontend Build Artifacts
+node_modules/
+frontend/node_modules/
+frontend/dist/
+dist/
+.env
+frontend/.env
+*.local
