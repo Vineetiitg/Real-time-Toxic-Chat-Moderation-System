@@ -1,0 +1,56 @@
+{
+  "source_file": "C:\\Users\\Vineet\\Downloads\\Real-time-Toxic-Chat-Moderation-System\\data_pipeline\\processed\\unified_clean.csv",
+  "total_samples": 37246,
+  "seed": 42,
+  "data_leakage_count": 0,
+  "splits": [
+    {
+      "split": "train",
+      "total": 29798,
+      "toxic_pos": 15392,
+      "toxic_rate": 51.65,
+      "severe_toxic_pos": 1197,
+      "severe_toxic_rate": 4.02,
+      "obscene_pos": 6593,
+      "obscene_rate": 22.13,
+      "threat_pos": 381,
+      "threat_rate": 1.28,
+      "insult_pos": 13627,
+      "insult_rate": 45.73,
+      "identity_hate_pos": 1991,
+      "identity_hate_rate": 6.68
+    },
+    {
+      "split": "val",
+      "total": 3724,
+      "toxic_pos": 1923,
+      "toxic_rate": 51.64,
+      "severe_toxic_pos": 150,
+      "severe_toxic_rate": 4.03,
+      "obscene_pos": 824,
+      "obscene_rate": 22.13,
+      "threat_pos": 48,
+      "threat_rate": 1.29,
+      "insult_pos": 1703,
+      "insult_rate": 45.73,
+      "identity_hate_pos": 249,
+      "identity_hate_rate": 6.69
+    },
+    {
+      "split": "test",
+      "total": 3724,
+      "toxic_pos": 1924,
+      "toxic_rate": 51.66,
+      "severe_toxic_pos": 150,
+      "severe_toxic_rate": 4.03,
+      "obscene_pos": 825,
+      "obscene_rate": 22.15,
+      "threat_pos": 48,
+      "threat_rate": 1.29,
+      "insult_pos": 1703,
+      "insult_rate": 45.73,
+      "identity_hate_pos": 249,
+      "identity_hate_rate": 6.69
+    }
+  ]
+}

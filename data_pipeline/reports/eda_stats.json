@@ -1,0 +1,83 @@
+{
+  "total_samples": 37246,
+  "generated_at": "2026-10-21 23:27:59",
+  "source_distribution": {
+    "english (jigsaw)": 14614,
+    "english": 8958,
+    "hindi": 5860,
+    "hindi/hinglish (hasoc)": 4889,
+    "hinglish": 2881,
+    "hinglish (curated)": 27,
+    "hindi_devanagari (curated)": 15,
+    "english (curated)": 2
+  },
+  "class_stats": [
+    {
+      "tag": "toxic",
+      "positives": 19239,
+      "negatives": 18007,
+      "rate_pct": 51.65,
+      "pos_weight": 1.0
+    },
+    {
+      "tag": "severe_toxic",
+      "positives": 1497,
+      "negatives": 35749,
+      "rate_pct": 4.02,
+      "pos_weight": 23.88
+    },
+    {
+      "tag": "obscene",
+      "positives": 8242,
+      "negatives": 29004,
+      "rate_pct": 22.13,
+      "pos_weight": 3.52
+    },
+    {
+      "tag": "threat",
+      "positives": 477,
+      "negatives": 36769,
+      "rate_pct": 1.28,
+      "pos_weight": 25.0
+    },
+    {
+      "tag": "insult",
+      "positives": 17033,
+      "negatives": 20213,
+      "rate_pct": 45.73,
+      "pos_weight": 1.19
+    },
+    {
+      "tag": "identity_hate",
+      "positives": 2489,
+      "negatives": 34757,
+      "rate_pct": 6.68,
+      "pos_weight": 13.96
+    }
+  ],
+  "pos_weights": {
+    "toxic": 1.0,
+    "severe_toxic": 23.88,
+    "obscene": 3.52,
+    "threat": 25.0,
+    "insult": 1.19,
+    "identity_hate": 13.96
+  },
+  "length_stats": {
+    "char_mean": 220.5,
+    "char_median": 127.0,
+    "char_p95": 690.0,
+    "char_max": 1991,
+    "word_mean": 38.9,
+    "word_median": 24.0,
+    "word_p95": 118.0,
+    "word_max": 371
+  },
+  "script_breakdown": {
+    "latin_ascii_pct": 90.9,
+    "devanagari_pct": 8.9,
+    "other_pct": 0.2
+  },
+  "safe_samples": 17383,
+  "safe_pct": 46.7
+}
