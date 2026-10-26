@@ -25,7 +25,7 @@ env/
 logs/
 
 # Models, Checkpoints & Heavy Weights (hosted on Hugging Face)
-models/
+/models/
 ml-service/checkpoints/
 ml-service/enc_dec/
 ml-service/qwen_moderator/

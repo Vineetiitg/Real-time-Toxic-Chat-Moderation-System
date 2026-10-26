@@ -106,21 +106,7 @@ export default function ChatWindow({ channelId, currentUserId, currentUserName }
                   isStreamingSuggestion: true,
                 });
               } else {
-                // Clean message -> deliver immediately
-                addMessage({
-                  id: Date.now().toString(),
-                  channelId,
-                  senderId: currentUserId,
-                  senderName: currentUserName,
-                  content: pendingTextRef.current,
-                  status: 'DELIVERED',
-                  createdAt: new Date().toISOString(),
-                  moderation: {
-                    isToxic: false,
-                    severity: 'SAFE',
-                    detectedLanguage: data.detected_language,
-                  },
-                });
+                // Clean message confirmed -> clear pending text; the server broadcasts 'new_message' to all clients
                 pendingTextRef.current = '';
                 setIsChecking(false);
               }
@@ -136,16 +122,20 @@ export default function ChatWindow({ channelId, currentUserId, currentUserName }
             );
           } else if (payload.type === 'new_message') {
             const msgData = payload.data;
+            const messageId = msgData.id || msgData.message_id || Date.now().toString();
+
             const isDup = useChatStore.getState().messages.some(
-              m => m.content === msgData.content &&
-                   m.senderId === msgData.sender_id &&
-                   Math.abs(new Date(m.createdAt).getTime() - new Date(msgData.created_at || Date.now()).getTime()) < 3000
+              m => m.id === messageId || (
+                m.content === msgData.content &&
+                m.senderId === msgData.sender_id &&
+                Math.abs(new Date(m.createdAt).getTime() - new Date(msgData.created_at || Date.now()).getTime()) < 10000
+              )
             );
 
             if (!isDup) {
               const mod = msgData.moderation || msgData.moderation_data;
               addMessage({
-                id: msgData.id || msgData.message_id || Date.now().toString(),
+                id: messageId,
                 channelId: msgData.channel_id || channelId,
                 senderId: msgData.sender_id,
                 senderName: msgData.sender_name,
@@ -391,17 +381,6 @@ export default function ChatWindow({ channelId, currentUserId, currentUserName }
                     setInterceptedModal(null);
                     pendingTextRef.current = '';
                     setIsChecking(false);
-
-                    addMessage({
-                      id: Date.now().toString(),
-                      channelId,
-                      senderId: currentUserId,
-                      senderName: currentUserName,
-                      content: safeRewrite,
-                      status: 'DELIVERED',
-                      createdAt: new Date().toISOString(),
-                      moderation: { isToxic: false, severity: 'SAFE', suggestion: safeRewrite },
-                    });
 
                     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
                       wsRef.current.send(

@@ -7,7 +7,7 @@ Defines document schemas for:
   - ModeratorFeedbackDocument: continuous learning review corrections
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, List, Optional
 from pydantic import BaseModel, Field
 
@@ -34,7 +34,7 @@ class ChatMessageDocument(BaseModel):
     status: str = "DELIVERED"  # DELIVERED | FLAGGED | BLOCKED
     moderation: Optional[ModerationMetadata] = None
     context_snapshot: List[str] = Field(default_factory=list)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     def to_mongo_dict(self) -> Dict:
         """Convert to MongoDB-compatible dictionary with ISO string datetimes."""
@@ -50,14 +50,12 @@ class ModeratorFeedbackDocument(BaseModel):
     message_id: str
     moderator_id: str
     model_prediction_was_correct: bool
-    correct_severity: Optional[str] = None
+    correct_severity: str = "SAFE"
     notes: Optional[str] = None
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     def to_mongo_dict(self) -> Dict:
-        """Convert to MongoDB dictionary."""
         data = self.model_dump()
         if isinstance(data.get("created_at"), datetime):
             data["created_at"] = data["created_at"].isoformat()
         return data
-
