@@ -2,6 +2,14 @@
 __pycache__/
 *.py[cod]
 *$py.class
+*.egg-info/
+src/*.egg-info/
+
+# Databases & Local SQLite files
+*.db
+*.sqlite
+*.sqlite3
+safechat.db
 
 # Virtual Environment
 .venv/
@@ -16,29 +24,51 @@ env/
 *.log
 logs/
 
-# Checkpoints (training artifacts usually not needed for inference)
-temp_checkpoints/
+# Models, Checkpoints & Heavy Weights (hosted on Hugging Face)
+models/
 ml-service/checkpoints/
+ml-service/enc_dec/
+ml-service/qwen_moderator/
+temp_checkpoints/
 *.safetensors
 *.bin
 *.pt
+*.model
+*.bpe.model
 
-# Gradio
-.gradio/
-
-# Data Pipeline — raw downloads and processed CSVs (large files, reproducible via script)
+# Datasets (large files, reproducible via pipeline scripts)
+*.csv
+*.jsonl
 data_pipeline/raw/
 data_pipeline/processed/
 data_pipeline/splits/*.csv
+ml-service/training/data/
 
 # Keep reports and pipeline code (small, reviewable)
 !data_pipeline/reports/
 !data_pipeline/splits/split_report.json
 
+# Notebooks & Temporary Scripts
+*.ipynb
+*.ps1
+git_commits_history.*
+GIT_COMMITS.*
+scripts/benchmark_*.py
+scripts/*.json
+scripts/bartTraining.py
+scripts/ensembleTraining.py
+detoxification/test_detox.py
+ml-service/compare_textdetox_report.json
+ml-service/comprehensive_test_report.json
+tests/test_alias.py
+tests/test_app.py
+
+# Legacy Prototypes
+app/
+
 # Node & Frontend Build Artifacts
 node_modules/
 frontend/node_modules/
-frontend/dist/
 dist/
 .env
 frontend/.env
