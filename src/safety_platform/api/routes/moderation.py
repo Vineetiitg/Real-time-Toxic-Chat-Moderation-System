@@ -60,15 +60,30 @@ async def moderate_message(payload: ModerateRequest):
     severity = ml_res.get("severity", "SAFE")
     suggestion = ml_res.get("suggestion")
 
-    # If toxic and no suggestion was returned by classifier, call detoxify endpoint
+    # If toxic and no suggestion was returned by classifier, call arbitration & detoxify
     if is_toxic and severity in ("MEDIUM", "HIGH") and not suggestion:
-        detox_res = await ml_client.detoxify_text(
+        roberta_labels = [k for k, v in ml_res.get('categories', {}).items() if v >= 0.4]
+        arbitration = await ml_client.arbitrate_and_detoxify(
             text=payload.text,
-            target_language=ml_res.get("detected_language", "en"),
+            roberta_labels=roberta_labels,
+            target_language=ml_res.get('detected_language', 'en'),
             context=context_snapshot
         )
-        suggestion = detox_res.get("detoxified_text") or detox_res.get("suggestion")
-        ml_res["suggestion"] = suggestion
+
+        # Accept FINALLY the Gemini results
+        if not arbitration.get('is_toxic', True):
+            is_toxic = False
+            severity = 'SAFE'
+            ml_res['is_toxic'] = False
+            ml_res['severity'] = 'SAFE'
+            ml_res['arbitration_override'] = True
+            suggestion = None
+        else:
+            suggestion = arbitration.get('detoxified_text') or arbitration.get('suggestion')
+            severity = arbitration.get('severity', severity)
+            ml_res['is_toxic'] = True
+            ml_res['severity'] = severity
+            ml_res['suggestion'] = suggestion
 
     # Determine status
     msg_status = "DELIVERED"

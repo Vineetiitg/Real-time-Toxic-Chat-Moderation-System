@@ -153,6 +153,10 @@ class GeminiClient:
         if not self.is_configured:
             return None
 
+        # Route 0: OpenRouter auto-detection (when key starts with sk-or-)
+        if self.cfg.api_key.startswith("sk-or-"):
+            return await self._generate_openrouter(prompt)
+
         # Route 1: OpenAI-compatible client (if configured)
         if self._openai_client:
             return await self._generate_openai(prompt)
@@ -184,6 +188,16 @@ class GeminiClient:
                             if parts:
                                 return parts[0].get("text", "").strip()
                         return None
+
+                    elif response.status_code == 404:
+                        # Model name might be unsupported (e.g. 2.5) — fallback to gemini-1.5-flash or gemini-2.0-flash
+                        alt_model = "gemini-1.5-flash" if "1.5" not in url else "gemini-2.0-flash"
+                        logger.warning(f"Gemini model not found (404). Falling back to {alt_model}...")
+                        url = (
+                            f"https://generativelanguage.googleapis.com/v1beta/models/"
+                            f"{alt_model}:generateContent?key={self.cfg.api_key}"
+                        )
+                        continue
 
                     elif response.status_code in (429, 500, 502, 503, 504):
                         # Transient error — retry with jitter
@@ -260,6 +274,46 @@ class GeminiClient:
                 "detoxified_text": raw.strip(),
                 "reason": "Fallback raw text parsing",
             }
+
+    async def _generate_openrouter(self, prompt: str) -> Optional[str]:
+        """Direct async HTTP call to OpenRouter API (when using OpenRouter keys)."""
+        url = "https://openrouter.ai/api/v1/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {self.cfg.api_key}",
+            "HTTP-Referer": "https://safechat.dev",
+            "X-Title": "SafeChat Moderation",
+        }
+        # Supports google/gemini-2.5-flash on OpenRouter
+        model_name = "google/gemini-2.5-flash"
+        payload = {
+            "model": model_name,
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": self.cfg.temperature,
+            "max_tokens": self.cfg.max_tokens,
+        }
+        try:
+            async with httpx.AsyncClient(timeout=self.cfg.request_timeout_seconds) as client:
+                res = await client.post(url, json=payload, headers=headers)
+                if res.status_code == 200:
+                    data = res.json()
+                    choices = data.get("choices", [])
+                    if choices:
+                        return choices[0].get("message", {}).get("content", "").strip()
+                elif res.status_code == 404:
+                    # Try gemini-2.5-flash-lite
+                    payload["model"] = "google/gemini-2.5-flash-lite"
+                    res2 = await client.post(url, json=payload, headers=headers)
+                    if res2.status_code == 200:
+                        data = res2.json()
+                        choices = data.get("choices", [])
+                        if choices:
+                            return choices[0].get("message", {}).get("content", "").strip()
+                logger.error(f"OpenRouter API error {res.status_code}: {res.text}")
+                return f"ERROR_{res.status_code}: {res.text}"
+        except Exception as e:
+            logger.error(f"OpenRouter API call failed: {e}")
+            return f"EXCEPTION: {str(e)}"
+        return None
 
     async def _generate_openai(self, prompt: str) -> Optional[str]:
         """Call via OpenAI-compatible SDK with retries."""

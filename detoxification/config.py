@@ -32,7 +32,7 @@ class DetoxConfig:
         default_factory=lambda: (
             os.getenv("GEMINI_MODEL")
             or os.getenv("SAFECHAT_GEMINI_MODEL")
-            or "gemini-2.5-flash"
+            or "gemini-1.5-flash"
         )
     )
     # Optional OpenAI-compatible base URL (e.g., OpenRouter, Groq, local vLLM, AICredits)

@@ -13,7 +13,7 @@ const envWsUrl = import.meta.env.VITE_WS_URL;
 export const API_BASE_URL: string = (
   envApiUrl && envApiUrl.trim()
     ? envApiUrl.replace(/\/+$/, '')
-    : 'http://localhost:8000'
+    : (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:8000')
 );
 
 // Base WebSocket URL

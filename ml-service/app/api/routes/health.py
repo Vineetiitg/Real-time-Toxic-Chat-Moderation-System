@@ -64,3 +64,26 @@ async def readiness_check():
         detail="Models still loading. Service is not ready to accept requests.",
     )
 
+
+
+@router.get("/health/gemini")
+async def check_gemini_api():
+    """Diagnostic endpoint to inspect Gemini API connectivity directly."""
+    import httpx
+    detox = model_manager.detoxifier
+    if not detox:
+        return {"error": "Detoxifier not initialized"}
+    client = getattr(detox._core, "client", None)
+    if not client or not client.is_configured:
+        return {"error": "GeminiClient not configured with an API key"}
+
+    try:
+        res = await client.generate("Reply with OK")
+        return {
+            "status": "success" if res else "failed",
+            "result": res,
+            "model": client.cfg.model,
+            "key_prefix": client.cfg.api_key[:8] + "..." if client.cfg.api_key else "none",
+        }
+    except Exception as e:
+        return {"error": str(e), "model": client.cfg.model}

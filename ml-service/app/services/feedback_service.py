@@ -37,7 +37,7 @@ class FeedbackService:
     async def connect(self) -> None:
         """Connect to MongoDB. Called during FastAPI startup."""
         try:
-            self._client = AsyncIOMotorClient(settings.MONGODB_URL)
+            self._client = AsyncIOMotorClient(settings.MONGODB_URL, serverSelectionTimeoutMS=2000)
             self._db = self._client[settings.MONGODB_DB]
 
             # Verify connection

@@ -97,23 +97,32 @@ app.include_router(api_router, prefix=settings.API_PREFIX)
 app.include_router(websocket.router)  # /ws/chat real-time gateway
 
 
-# ── Root Endpoint ─────────────────────────────────────────────────────
-@app.get("/", tags=["Root"])
-async def root():
-    """Service status and API link registry."""
-    return {
-        "service": settings.APP_NAME,
-        "version": settings.APP_VERSION,
-        "docs": "/docs",
-        "health": f"{settings.API_PREFIX}/health",
-        "ready": f"{settings.API_PREFIX}/ready",
-        "endpoints": {
-            "auth_register": f"POST {settings.API_PREFIX}/auth/register",
-            "auth_login": f"POST {settings.API_PREFIX}/auth/login",
-            "channels": f"GET/POST {settings.API_PREFIX}/channels",
-            "chat_history": f"GET {settings.API_PREFIX}/chat/messages/{{channel_id}}",
-            "moderate_rest": f"POST {settings.API_PREFIX}/moderate",
-            "feedback": f"POST {settings.API_PREFIX}/feedback",
-            "websocket_chat": "WS /ws/chat",
-        },
-    }
+# ── Frontend SPA Mounting / Root Endpoint ─────────────────────────────
+import os
+from fastapi.staticfiles import StaticFiles
+
+_project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+_dist_dir = os.path.join(_project_root, "frontend", "dist")
+
+if os.path.exists(_dist_dir):
+    app.mount("/", StaticFiles(directory=_dist_dir, html=True), name="frontend")
+else:
+    @app.get("/", tags=["Root"])
+    async def root():
+        """Service status and API link registry."""
+        return {
+            "service": settings.APP_NAME,
+            "version": settings.APP_VERSION,
+            "docs": "/docs",
+            "health": f"{settings.API_PREFIX}/health",
+            "ready": f"{settings.API_PREFIX}/ready",
+            "endpoints": {
+                "auth_register": f"POST {settings.API_PREFIX}/auth/register",
+                "auth_login": f"POST {settings.API_PREFIX}/auth/login",
+                "channels": f"GET/POST {settings.API_PREFIX}/channels",
+                "chat_history": f"GET {settings.API_PREFIX}/chat/messages/{{channel_id}}",
+                "moderate_rest": f"POST {settings.API_PREFIX}/moderate",
+                "feedback": f"POST {settings.API_PREFIX}/feedback",
+                "websocket_chat": "WS /ws/chat",
+            },
+        }

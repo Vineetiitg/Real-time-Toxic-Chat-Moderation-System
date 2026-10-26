@@ -33,6 +33,7 @@ Context-Aware Mode:
   and current message.
 """
 
+import os
 import time
 from typing import Dict, List, Optional
 
@@ -70,6 +71,9 @@ class ToxicityClassifier:
 
     def load(self) -> None:
         """Load fine-tuned MuRIL model into memory."""
+        if self._model_name.startswith((".", "/")) and not os.path.exists(self._model_name):
+            logger.warning(f"Local model path '{self._model_name}' not found on disk. Falling back to HF Hub: vineet88/hingbert-toxicity-finetuned")
+            self._model_name = "vineet88/hingbert-toxicity-finetuned"
         logger.info(f"Loading tokenizer and model ({self._model_name}) on {self.device}...")
         try:
             self.tokenizer = AutoTokenizer.from_pretrained(self._model_name)

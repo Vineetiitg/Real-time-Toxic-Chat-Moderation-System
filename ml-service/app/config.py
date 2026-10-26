@@ -39,7 +39,7 @@ class Settings(BaseSettings):
     # Replaces the old IndicBART approach with LLM-powered
     # intent-preserving style transfer via Gemini.
     GEMINI_API_KEY: str = ""
-    GEMINI_MODEL: str = "gemini-2.5-flash"
+    GEMINI_MODEL: str = "gemini-1.5-flash"
     GEMINI_BASE_URL: str = ""
     DETOX_MAX_TOKENS: int = 256
     REDIS_URL: str = ""

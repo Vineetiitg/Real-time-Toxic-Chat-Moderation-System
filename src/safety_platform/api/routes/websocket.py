@@ -110,38 +110,49 @@ async def websocket_chat_gateway(
             elif severity == "MEDIUM":
                 msg_status = "FLAGGED"
 
-            # ── Step 4: Stream Gemini AI Detoxification if Toxic ─────
+            # ── Step 4: Gemini Arbitration & Detoxification if Toxic ─────
             if is_toxic and severity in ("MEDIUM", "HIGH"):
-                await websocket.send_json({
-                    "type": "detox_start",
-                    "data": {"language": detected_lang},
-                })
+                roberta_labels = [k for k, v in classification.get('categories', {}).items() if v >= 0.4]
+                arbitration = await ml_client.arbitrate_and_detoxify(
+                    text=text,
+                    roberta_labels=roberta_labels,
+                    target_language=detected_lang,
+                    context=context_snapshot
+                )
 
-                if not suggestion:
-                    detox_res = await ml_client.detoxify_text(
-                        text=text,
-                        target_language=detected_lang,
-                        context=context_snapshot
-                    )
-                    suggestion = detox_res.get("detoxified_text") or detox_res.get("suggestion")
+                # Accept FINALLY the Gemini results
+                if not arbitration.get('is_toxic', True):
+                    is_toxic = False
+                    severity = 'SAFE'
+                    msg_status = 'DELIVERED'
+                    classification['is_toxic'] = False
+                    classification['severity'] = 'SAFE'
+                    suggestion = None
+                else:
+                    suggestion = arbitration.get('detoxified_text') or arbitration.get('suggestion')
+                    severity = arbitration.get('severity', severity)
+                    classification['severity'] = severity
 
-                suggestion_text = suggestion or text
-                classification["suggestion"] = suggestion_text
-
-                # Simulate token-by-token streaming over WebSocket for visual WOW factor
-                words = suggestion_text.split(" ")
-                for i, word in enumerate(words):
-                    chunk = word + (" " if i < len(words) - 1 else "")
                     await websocket.send_json({
-                        "type": "detox_chunk",
-                        "data": {"chunk": chunk},
+                        "type": "detox_start",
+                        "data": {"language": detected_lang},
                     })
 
-                await websocket.send_json({
-                    "type": "detox_end",
-                    "data": {"full_text": suggestion_text},
-                })
+                    suggestion_text = suggestion or text
+                    classification["suggestion"] = suggestion_text
 
+                    words = suggestion_text.split(' ')
+                    for i, word in enumerate(words):
+                        chunk = word + (' ' if i < len(words) - 1 else '')
+                        await websocket.send_json({
+                            "type": "detox_chunk",
+                            "data": {"chunk": chunk},
+                        })
+
+                    await websocket.send_json({
+                        "type": "detox_end",
+                        "data": {"full_text": suggestion_text},
+                    })
             # ── Step 5: Save Full Record into MongoDB ────────────────
             saved_doc = await ChatService.save_message_to_mongo(
                 channel_id=channel_clean,
