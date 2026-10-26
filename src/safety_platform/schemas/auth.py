@@ -2,7 +2,7 @@
 SafeChat API Gateway — Authentication & User Schemas
 """
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, ConfigDict
 from typing import Optional
 
 
@@ -28,6 +28,8 @@ class TokenResponse(BaseModel):
 
 class UserResponse(BaseModel):
     """Public user profile DTO."""
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
     email: str
     display_name: str
@@ -36,6 +38,3 @@ class UserResponse(BaseModel):
     is_muted: bool
     violation_count: int
     created_at: str
-
-    class Config:
-        from_attributes = True

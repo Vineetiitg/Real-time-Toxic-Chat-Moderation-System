@@ -2,7 +2,7 @@
 SafeChat API Gateway — Channel Schemas
 """
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional
 
 
@@ -14,11 +14,10 @@ class ChannelCreateRequest(BaseModel):
 
 class ChannelResponse(BaseModel):
     """Channel information DTO."""
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
     name: str
     description: Optional[str] = None
     created_by_id: Optional[str] = None
     created_at: str
-
-    class Config:
-        from_attributes = True
