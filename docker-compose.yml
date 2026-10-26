@@ -1,28 +1,44 @@
 services:
+  # ── 1. Frontend Web Client (React + Vite + Nginx) ───────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"
+    depends_on:
+      - moderation-api
+    networks:
+      - safechat-net
+
+  # ── 2. Primary API Gateway & Chat Server (FastAPI Port 8000) ─
   moderation-api:
     build:
       context: .
-    env_file:
-      - .env
+      dockerfile: Dockerfile
     ports:
       - "8000:8000"
     depends_on:
-      - postgres
-      - redis
-      - mongodb
-      - ml-service
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      mongodb:
+        condition: service_started
     environment:
       - DATABASE_URL=postgresql+asyncpg://safety_user:safety_password@postgres:5432/safety_platform
       - REDIS_URL=redis://redis:6379/0
       - MONGODB_URL=mongodb://mongodb:27017
       - ML_SERVICE_URL=http://ml-service:8000
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+    networks:
+      - safechat-net
 
-
+  # ── 3. Dedicated ML Microservice (FastAPI Port 8001) ─────────
   ml-service:
     build:
-      context: ./ml-service
-    env_file:
-      - ./ml-service/.env
+      context: .
+      dockerfile: ml-service/Dockerfile
     ports:
       - "8001:8000"
     depends_on:
@@ -31,7 +47,11 @@ services:
       - ./ml-service/checkpoints:/app/checkpoints
     environment:
       - SAFECHAT_MONGODB_URL=mongodb://mongodb:27017
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+    networks:
+      - safechat-net
 
+  # ── 4. PostgreSQL 16 (Relational Core) ──────────────────────
   postgres:
     image: postgres:16-alpine
     environment:
@@ -42,21 +62,36 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U safety_user -d safety_platform"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - safechat-net
 
+  # ── 5. Redis 7 (In-Memory Sliding-Window Rate Limiter) ──────
   redis:
     image: redis:7-alpine
     ports:
       - "6379:6379"
+    networks:
+      - safechat-net
 
+  # ── 6. MongoDB 7 (Unstructured Chat Logs & AI Feedback) ─────
   mongodb:
     image: mongo:7-jammy
     ports:
       - "27017:27017"
     volumes:
       - mongodb_data:/data/db
+    networks:
+      - safechat-net
 
 volumes:
   postgres_data:
   mongodb_data:
 
-
+networks:
+  safechat-net:
+    driver: bridge
