@@ -3,7 +3,8 @@ SafeChat API Gateway — Channel Schemas
 """
 
 from pydantic import BaseModel, Field, ConfigDict
-from typing import Optional
+from typing import Optional, Union
+from datetime import datetime
 
 
 class ChannelCreateRequest(BaseModel):
@@ -20,4 +21,4 @@ class ChannelResponse(BaseModel):
     name: str
     description: Optional[str] = None
     created_by_id: Optional[str] = None
-    created_at: str
+    created_at: Union[str, datetime]

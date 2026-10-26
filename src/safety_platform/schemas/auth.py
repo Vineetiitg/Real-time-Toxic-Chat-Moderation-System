@@ -3,7 +3,8 @@ SafeChat API Gateway — Authentication & User Schemas
 """
 
 from pydantic import BaseModel, EmailStr, Field, ConfigDict
-from typing import Optional
+from typing import Optional, Union
+from datetime import datetime
 
 
 class RegisterRequest(BaseModel):
@@ -37,4 +38,4 @@ class UserResponse(BaseModel):
     active: bool
     is_muted: bool
     violation_count: int
-    created_at: str
+    created_at: Union[str, datetime]
