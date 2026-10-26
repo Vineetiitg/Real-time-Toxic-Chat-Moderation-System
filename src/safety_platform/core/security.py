@@ -7,28 +7,36 @@ validation for API and WebSocket endpoints.
 
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Any
+import bcrypt
 from fastapi import Depends, HTTPException, status, WebSocket, WebSocketException
 from fastapi.security import OAuth2PasswordBearer
 import jwt
-from passlib.context import CryptContext
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from safety_platform.core.config import settings
 from safety_platform.core.db import get_db
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_PREFIX}/auth/login", auto_error=False)
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a plain password against a bcrypt hashed password."""
-    return pwd_context.verify(plain_password, hashed_password)
+    try:
+        return bcrypt.checkpw(
+            plain_password.encode("utf-8")[:72],
+            hashed_password.encode("utf-8"),
+        )
+    except Exception:
+        return False
 
 
 def get_password_hash(password: str) -> str:
     """Generate a bcrypt password hash."""
-    return pwd_context.hash(password)
+    return bcrypt.hashpw(
+        password.encode("utf-8")[:72],
+        bcrypt.gensalt(),
+    ).decode("utf-8")
 
 
 def create_access_token(subject: str, expires_delta: Optional[timedelta] = None) -> str:
