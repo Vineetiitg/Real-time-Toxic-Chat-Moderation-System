@@ -24,6 +24,7 @@ class DetoxConfig:
             os.getenv("GEMINI_API_KEY")
             or os.getenv("SAFECHAT_GEMINI_API_KEY")
             or os.getenv("GOOGLE_API_KEY")
+            or os.getenv("OPENROUTER_API_KEY")
             or ""
         )
     )
