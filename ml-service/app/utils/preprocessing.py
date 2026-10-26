@@ -256,15 +256,8 @@ def normalize_for_toxicity(text: str) -> str:
     # Step 3: Reduce character repetition (keep max 2 of same char)
     text = re.sub(r"(.)\1{2,}", r"\1\1", text)
 
-    # Step 4: Remove separators between single characters
-    # "f.u.c.k" or "f u c k" → "fuck"
-    # Only for Latin characters (don't break Devanagari)
-    # Fixed quantifier: {1,} instead of {2,} to handle progressive removal
-    text = re.sub(
-        r"(?<=[a-z])[.\-_\s](?=[a-z](?:[.\-_\s][a-z]){1,})",
-        "",
-        text,
-    )
+    # Step 4: Remove punctuation separators between single characters (e.g. f.u.c.k -> fuck)
+    text = re.sub(r"([a-zA-Z])[.\-_](?=[a-zA-Z])", r"\1", text)
 
     # Step 5: Common leet speak mappings
     leet_map = {
