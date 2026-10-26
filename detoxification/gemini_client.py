@@ -126,18 +126,6 @@ class GeminiClient:
 
     def __init__(self, config: Optional[DetoxConfig] = None):
         self.cfg = config or DetoxConfig()
-        self._openai_client = None
-
-        if self.cfg.base_url or (self.cfg.api_key and self.cfg.api_key.startswith("sk-")):
-            try:
-                from openai import AsyncOpenAI
-                self._openai_client = AsyncOpenAI(
-                    api_key=self.cfg.api_key,
-                    base_url=self.cfg.base_url or "https://generativelanguage.googleapis.com/v1beta/openai/",
-                )
-                logger.info(f"Initialized OpenAI-compatible client (model: {self.cfg.model})")
-            except Exception as e:
-                logger.warning(f"Could not initialize OpenAI client: {e}")
 
     @property
     def is_configured(self) -> bool:
@@ -154,12 +142,8 @@ class GeminiClient:
         if not self.is_configured:
             return None
 
-        # Route 0: OpenRouter auto-detection (when key starts with sk-or-)
-        if self.cfg.api_key.startswith("sk-or-"):
-            return await self._generate_openrouter(prompt)
-
-        # Route 1: OpenAI-compatible client (if configured)
-        if self._openai_client:
+        # Route 0: OpenAI-compatible endpoints (AICredits, OpenRouter, Groq, custom base_url, sk-* keys)
+        if self.cfg.base_url or self.cfg.api_key.startswith("sk-"):
             return await self._generate_openai(prompt)
 
         # Route 2: Native Google Gemini REST API via httpx
@@ -318,22 +302,35 @@ class GeminiClient:
 
     async def _generate_openai(self, prompt: str) -> Optional[str]:
         """Call via OpenAI-compatible SDK with retries."""
+    async def _generate_openai(self, prompt: str) -> Optional[str]:
+        """Call via OpenAI-compatible endpoint with direct httpx with retries."""
+        base = (self.cfg.base_url or "https://openrouter.ai/api/v1").rstrip("/")
+        url = f"{base}/chat/completions" if not base.endswith("/chat/completions") else base
+        headers = {
+            "Authorization": f"Bearer {self.cfg.api_key}",
+            "Content-Type": "application/json",
+        }
+        payload = {
+            "model": self.cfg.model,
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": self.cfg.temperature,
+            "max_tokens": self.cfg.max_tokens,
+        }
         delay = self.cfg.initial_retry_delay
         for attempt in range(1, self.cfg.max_retries + 1):
             try:
-                response = await self._openai_client.chat.completions.create(
-                    model=self.cfg.model,
-                    messages=[{"role": "user", "content": prompt}],
-                    temperature=self.cfg.temperature,
-                    max_tokens=self.cfg.max_tokens,
-                )
-                if response.choices and response.choices[0].message:
-                    return response.choices[0].message.content.strip()
-                return None
+                async with httpx.AsyncClient(timeout=self.cfg.request_timeout_seconds) as client:
+                    res = await client.post(url, json=payload, headers=headers)
+                    if res.status_code == 200:
+                        data = res.json()
+                        choices = data.get("choices", [])
+                        if choices:
+                            return choices[0].get("message", {}).get("content", "").strip()
+                    logger.warning(f"OpenAI-compatible endpoint returned HTTP {res.status_code}: {res.text[:150]}")
             except Exception as e:
                 logger.warning(f"OpenAI proxy attempt {attempt} failed: {e}")
-                await asyncio.sleep(delay)
-                delay *= self.cfg.backoff_factor
+            await asyncio.sleep(delay)
+            delay *= self.cfg.backoff_factor
         return None
 
     async def stream_generate(
@@ -346,18 +343,38 @@ class GeminiClient:
         if not self.is_configured:
             return
 
-        if self._openai_client:
+        if self.cfg.base_url or self.cfg.api_key.startswith("sk-"):
+            base = (self.cfg.base_url or "https://openrouter.ai/api/v1").rstrip("/")
+            url = f"{base}/chat/completions" if not base.endswith("/chat/completions") else base
+            headers = {
+                "Authorization": f"Bearer {self.cfg.api_key}",
+                "Content-Type": "application/json",
+            }
+            payload = {
+                "model": self.cfg.model,
+                "messages": [{"role": "user", "content": prompt}],
+                "temperature": self.cfg.temperature,
+                "max_tokens": self.cfg.max_tokens,
+                "stream": True,
+            }
             try:
-                stream = await self._openai_client.chat.completions.create(
-                    model=self.cfg.model,
-                    messages=[{"role": "user", "content": prompt}],
-                    temperature=self.cfg.temperature,
-                    max_tokens=self.cfg.max_tokens,
-                    stream=True,
-                )
-                async for chunk in stream:
-                    if chunk.choices and chunk.choices[0].delta and chunk.choices[0].delta.content:
-                        yield chunk.choices[0].delta.content
+                async with httpx.AsyncClient(timeout=self.cfg.request_timeout_seconds) as client:
+                    async with client.stream("POST", url, json=payload, headers=headers) as response:
+                        if response.status_code != 200:
+                            logger.error(f"OpenAI SSE error: {response.status_code}")
+                            return
+                        async for line in response.aiter_lines():
+                            if line.startswith("data: "):
+                                raw_json = line[6:].strip()
+                                if not raw_json or raw_json == "[DONE]":
+                                    continue
+                                try:
+                                    data = json.loads(raw_json)
+                                    choices = data.get("choices", [])
+                                    if choices and choices[0].get("delta", {}).get("content"):
+                                        yield choices[0]["delta"]["content"]
+                                except Exception:
+                                    continue
                 return
             except Exception as e:
                 logger.error(f"OpenAI proxy streaming failed: {e}")
