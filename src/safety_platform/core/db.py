@@ -66,7 +66,7 @@ async def connect_redis() -> None:
             settings.REDIS_URL,
             encoding="utf-8",
             decode_responses=True,
-            socket_timeout=5.0,
+            socket_timeout=3.0,
         )
         await _redis_pool.ping()
         logger.success(f"Connected to Redis at {settings.REDIS_URL}")
@@ -97,7 +97,7 @@ async def connect_mongo() -> None:
     """Initialize MongoDB connection during startup."""
     global _mongo_client, _mongo_db
     try:
-        _mongo_client = AsyncIOMotorClient(settings.MONGODB_URL)
+        _mongo_client = AsyncIOMotorClient(settings.MONGODB_URL, serverSelectionTimeoutMS=2000)
         _mongo_db = _mongo_client[settings.MONGODB_DB]
         await _mongo_client.admin.command("ping")
         logger.success(f"Connected to MongoDB at {settings.MONGODB_URL}/{settings.MONGODB_DB}")
