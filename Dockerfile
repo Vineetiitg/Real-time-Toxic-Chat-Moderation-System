@@ -15,7 +15,9 @@ COPY src ./src
 COPY detoxification ./detoxification
 COPY frontend/dist ./frontend/dist
 
-RUN pip install --no-cache-dir --upgrade pip && pip install --no-cache-dir -e . aiosqlite
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir loguru aiosqlite greenlet bcrypt && \
+    pip install --no-cache-dir -e .
 
 EXPOSE 8000
 
