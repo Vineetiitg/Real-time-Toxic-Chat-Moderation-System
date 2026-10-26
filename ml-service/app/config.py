@@ -5,9 +5,10 @@ All settings can be overridden via environment variables prefixed with SAFECHAT_
 Example: SAFECHAT_GEMINI_API_KEY=your_key
 """
 
-from pydantic_settings import BaseSettings
-from typing import List
+from typing import List, Union
 import torch
+from pydantic import field_validator
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
@@ -16,9 +17,15 @@ class Settings(BaseSettings):
     # ── App ──────────────────────────────────────────────
     APP_NAME: str = "SafeChat ML Service"
     APP_VERSION: str = "3.0.0"
-    DEBUG: bool = False
+    DEBUG: Union[bool, str] = False
     HOST: str = "0.0.0.0"
     PORT: int = 8001
+
+    @field_validator("DEBUG", mode="before")
+    def parse_debug(cls, v):
+        if isinstance(v, str):
+            return v.lower() in ("true", "1", "yes", "debug", "dev")
+        return bool(v)
 
     # ── Device ───────────────────────────────────────────
     DEVICE: str = "cuda" if torch.cuda.is_available() else "cpu"
@@ -33,7 +40,9 @@ class Settings(BaseSettings):
     # intent-preserving style transfer via Gemini.
     GEMINI_API_KEY: str = ""
     GEMINI_MODEL: str = "gemini-2.5-flash"
+    GEMINI_BASE_URL: str = ""
     DETOX_MAX_TOKENS: int = 256
+    REDIS_URL: str = ""
 
     # ── Inference Settings ───────────────────────────────
     MAX_SEQ_LENGTH: int = 256
