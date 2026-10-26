@@ -1,29 +1,29 @@
 /**
- * SafeChat Frontend — Environment & Configuration
+ * SafeChat Frontend — Environment & Dynamic Configuration
  *
- * Automatically resolves API and WebSocket URLs:
- * 1. From Vite env variables (VITE_API_URL, VITE_WS_URL)
- * 2. Or dynamically inferred from the browser host location
+ * Automatically resolves API and WebSocket URLs from the current browser origin.
+ * Works seamlessly whether hosted on localhost, EC2 public IP, custom domain, or behind a reverse proxy.
  */
 
-const envApiUrl = import.meta.env.VITE_API_URL;
-const envWsUrl = import.meta.env.VITE_WS_URL;
-
-// Base HTTP API URL
+// If running in browser, dynamically use current window location origin & host
 export const API_BASE_URL: string = (
-  envApiUrl && envApiUrl.trim()
-    ? envApiUrl.replace(/\/+$/, '')
-    : (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:8000')
+  typeof window !== 'undefined'
+    ? window.location.origin
+    : (import.meta.env.VITE_API_URL || 'http://localhost:8000')
 );
 
-// Base WebSocket URL
 export const WS_BASE_URL: string = (
-  envWsUrl && envWsUrl.trim()
-    ? envWsUrl.replace(/\/+$/, '')
-    : API_BASE_URL.replace(/^http/, 'ws')
+  typeof window !== 'undefined'
+    ? `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}`
+    : (import.meta.env.VITE_WS_URL || 'ws://localhost:8000')
 );
 
-export const getWsChatUrl = (channelId: string = 'general', token?: string | null, userId?: string, userName?: string): string => {
+export const getWsChatUrl = (
+  channelId: string = 'general',
+  token?: string | null,
+  userId?: string,
+  userName?: string
+): string => {
   const url = new URL(`${WS_BASE_URL}/ws/chat`);
   url.searchParams.set('channel', channelId);
   if (token) {
@@ -37,4 +37,3 @@ export const getWsChatUrl = (channelId: string = 'general', token?: string | nul
   }
   return url.toString();
 };
-

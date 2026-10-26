@@ -70,6 +70,8 @@ app/
 node_modules/
 frontend/node_modules/
 dist/
+!frontend/dist/
+!frontend/dist/**
 .env
 frontend/.env
 *.local
