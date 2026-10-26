@@ -22,6 +22,7 @@ class IntentPreservingScrubber:
         # Severe slurs & mother/sister abuses -> neutral address or remove
         (r'\b(bhenchod|behenchod|bhenchodd|banchod|bc|bsdk|bhosdike|bhosadike|bhosadi|machod|madarchod|madarchodd|mc)\b', 'yaar'),
         (r'\b(chutiya|chutiye|chutye|chomu|lukkha|nalayak|kamina|kamine|kamini)\b', 'naasamajh'),
+        (r'\b(tu haramkhor hai|tum haramkhor ho|aap haramkhor ho)\b', 'aapka tareeqa theek nahi hai'),
         (r'\b(saale|saala|sale|sala|harami|haramkhor|dalla|randi|suar|kutta|kutte|kutti|bhikari)\b', ''),
         (r'\b(gadhha|gadha|gadhe|bewakoof|ullu|ullu ke patthe)\b', 'bhai thoda samajhdaari dikhao'),
         # Violent threats & hostility -> de-escalate intent
@@ -112,7 +113,7 @@ class IntentPreservingScrubber:
             if has_devanagari:
                 return "कृपया बातचीत को सम्मानजनक बनाए रखें।"
             elif detected_language in ("hi-en", "hinglish", "indic-en"):
-                return "Yaar, thoda respectfully baat karte hain."
+                return "Bhai, kripya thoda theek se aur imandari se pesh aao."
             else:
                 return "Let's keep the conversation respectful."
 

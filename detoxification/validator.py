@@ -36,10 +36,10 @@ class ResponseValidator:
     # Critical toxicity words that MUST NOT appear in detoxified text
     TOXIC_RESIDUAL_KEYWORDS = [
         # English
-        "fuck", "bitch", "cunt", "asshole", "retard", "dickhead", "kill yourself", "die in a fire",
+        "fuck", "bitch", "cunt", "asshole", "retard", "dickhead", "kill yourself", "die in a fire", "scoundrel", "rascal",
         # Hinglish / Hindi
-        "bhenchod", "madarchod", "chutiya", "bhosdike", "harami", "machod", "randi",
-        "बहनचोद", "मादरचोद", "भोसड़ी", "चूतिया",
+        "bhenchod", "madarchod", "chutiya", "bhosdike", "harami", "haramkhor", "machod", "randi",
+        "बहनचोद", "मादरचोद", "भोसड़ी", "चूतिया", "हरामखोर",
     ]
 
     # Meta-preamble patterns that LLMs sometimes generate

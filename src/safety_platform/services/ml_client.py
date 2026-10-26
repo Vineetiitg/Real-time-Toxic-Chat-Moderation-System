@@ -8,6 +8,7 @@ Includes automatic local fallback to the Phase 3 Detoxification Engine when the 
 
 import os
 import sys
+import re
 import httpx
 from typing import Dict, Any, Optional, List
 from loguru import logger
@@ -22,9 +23,37 @@ if _project_root not in sys.path:
 class MLClientService:
     """Async client communicating with SafeChat ML Service (Port 8001 / 8000)."""
 
+    _TOXIC_PATTERNS = [
+        r'\b(bhenchod|behenchod|banchod|bc|bsdk|bhosdike|bhosadike|bhosadi|machod|madarchod|madarchodd|mc)\b',
+        r'\b(chutiya|chutiye|chutye|chomu|lukkha|nalayak|kamina|kamine|kamini)\b',
+        r'\b(saale|saala|sale|sala|harami|haramkhor|dalla|randi|suar|kutta|kutte|kutti|bhikari)\b',
+        r'\b(gadhha|gadha|gadhe|bewakoof|ullu)\b',
+        r'\b(fuck|fucking|bitch|cunt|asshole|retard|dickhead|idiot|moron|bastard)\b',
+        r'बहनचोद|मादरचोद|भोसड़ी|हरामी|हरामखोर|चूतिया|बेवकूफ|गधा|नालायक|कमीने|कुत्ता',
+        r'\b(jaan se maar|maar dunga|maar duga|khatam kar dunga|thappad marunga|muh tod dunga|aukat me reh)\b',
+    ]
+    _TOXIC_REGEX = re.compile('|'.join(_TOXIC_PATTERNS), re.IGNORECASE)
+
     def __init__(self):
         self.base_url = settings.ML_SERVICE_URL.rstrip("/")
         self.timeout = settings.ML_SERVICE_TIMEOUT_SECONDS
+
+    def _apply_hybrid_safety_guard(self, text: str, result: Dict[str, Any]) -> Dict[str, Any]:
+        """Ensure explicit toxic slurs and insults are never falsely classified as safe."""
+        if self._TOXIC_REGEX.search(text):
+            result["is_toxic"] = True
+            result["overall_score"] = max(result.get("overall_score", 0.0), 0.85)
+            if result.get("severity") in ("SAFE", "LOW", None):
+                result["severity"] = "MEDIUM"
+            cats = result.get("categories") or {}
+            cats["insult"] = max(cats.get("insult", 0.0), 0.85)
+            cats["toxic"] = max(cats.get("toxic", 0.0), 0.85)
+            result["categories"] = cats
+            if any('\u0900' <= c <= '\u097F' for c in text):
+                result["detected_language"] = "hi"
+            elif any(w in text.lower() for w in ["haramkhor", "harami", "chutiya", "bhenchod", "saale", "kamina", "nalayak"]):
+                result["detected_language"] = "hi-en"
+        return result
 
     async def moderate_text(self, text: str, context: Optional[List[str]] = None) -> Dict[str, Any]:
         """
@@ -38,7 +67,8 @@ class MLClientService:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 res = await client.post(url, json=payload)
                 if res.status_code == 200:
-                    return res.json()
+                    data = res.json()
+                    return self._apply_hybrid_safety_guard(text, data)
                 logger.warning(f"ML Service returned HTTP {res.status_code}: {res.text}")
         except httpx.RequestError as e:
             logger.error(f"ML Service connection failed at {url}: {e}")
@@ -46,7 +76,7 @@ class MLClientService:
             logger.error(f"Unexpected error calling ML Service: {e}")
 
         # Fallback response so chat remains functional
-        return {
+        fallback = {
             "is_toxic": False,
             "overall_score": 0.0,
             "severity": "SAFE",
@@ -56,6 +86,7 @@ class MLClientService:
             "inference_time_ms": 0,
             "model_version": "fallback-offline",
         }
+        return self._apply_hybrid_safety_guard(text, fallback)
 
     async def detoxify_text(self, text: str, target_language: Optional[str] = "en", context: Optional[List[str]] = None) -> Dict[str, Any]:
         """Request intent-preserving LLM style transfer from ML Service with local fallback."""

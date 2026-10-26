@@ -70,10 +70,11 @@ TASK: Rewrite the following toxic or abusive message so that it is polite and re
 
 STRICT RULES:
 1. Output ONLY the rewritten sentence. No preamble, no quotes, no explanations.
-2. Maintain the EXACT SAME language and script. If the input is Hinglish, respond in Hinglish. If Devanagari Hindi, respond in Devanagari Hindi. If English, respond in English.
-3. Keep the natural conversational tone. Do NOT make it sound like a corporate apology or polite reminder.
-4. If the message has a question or request (e.g. asking why something broke, or telling someone to hurry), keep that exact question/request.
-5. Keep the length concise, similar to the original text.
+2. Maintain the EXACT SAME language and script. If the input is Hinglish, respond in natural Hinglish (Roman English script for Hindi). NEVER switch languages or translate to archaic English (do NOT use words like 'scoundrel', 'rascal', 'fool').
+3. If the message is a single slur or pure insult with no context (e.g. 'haramkhor', 'chutiya', 'idiot'), rewrite it as a polite, dignified request for respect or honesty in the SAME language (e.g. for 'haramkhor' in Hinglish: 'Bhai, kripya theek se aur imandari se pesh aao.').
+4. Keep the natural conversational tone. Do NOT make it sound like a corporate apology or polite reminder.
+5. If the message has a question or request (e.g. asking why something broke, or telling someone to hurry), keep that exact question/request.
+6. Keep the length concise, similar to the original text.
 
 REWRITTEN:"""
 

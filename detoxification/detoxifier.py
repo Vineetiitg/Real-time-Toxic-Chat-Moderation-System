@@ -35,11 +35,14 @@ def detect_language_simple(text: str) -> str:
     if total_alpha > 0 and (devanagari_count / total_alpha) > 0.25:
         return "hi"
 
-    # Common Hinglish marker words
+    # Common Hinglish marker words and slurs
     hinglish_markers = {
         "yaar", "bhai", "hai", "hain", "kya", "kyu", "kyun", "kar", "karo", "raha",
         "rahe", "rahi", "nahi", "nahin", "mujhe", "tujhe", "tera", "mera", "yeh",
-        "woh", "kaise", "kaisa", "tha", "the", "thi", "hoga", "apna", "apni", "pehle"
+        "woh", "kaise", "kaisa", "tha", "the", "thi", "hoga", "apna", "apni", "pehle",
+        "haramkhor", "harami", "chutiya", "chutiye", "chutye", "kamina", "kamine",
+        "nalayak", "saale", "saala", "sale", "sala", "gadhha", "gadha", "gadhe",
+        "bewakoof", "bhenchod", "behenchod", "madarchod", "bhosdike", "aukat", "bakwas"
     }
     words = {w.lower() for w in text.split()}
     if len(words.intersection(hinglish_markers)) >= 1:
