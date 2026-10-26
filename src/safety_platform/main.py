@@ -12,9 +12,12 @@ Run with:
     uvicorn safety_platform.main:app --host 0.0.0.0 --port 8000 --reload
 """
 
+import os
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from loguru import logger
 
 from safety_platform.core.config import settings
@@ -98,31 +101,54 @@ app.include_router(websocket.router)  # /ws/chat real-time gateway
 
 
 # ── Frontend SPA Mounting / Root Endpoint ─────────────────────────────
-import os
-from fastapi.staticfiles import StaticFiles
-
 _project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 _dist_dir = os.path.join(_project_root, "frontend", "dist")
+_assets_dir = os.path.join(_dist_dir, "assets")
 
-if os.path.exists(_dist_dir):
-    app.mount("/", StaticFiles(directory=_dist_dir, html=True), name="frontend")
-else:
-    @app.get("/", tags=["Root"])
-    async def root():
-        """Service status and API link registry."""
-        return {
-            "service": settings.APP_NAME,
-            "version": settings.APP_VERSION,
-            "docs": "/docs",
-            "health": f"{settings.API_PREFIX}/health",
-            "ready": f"{settings.API_PREFIX}/ready",
-            "endpoints": {
-                "auth_register": f"POST {settings.API_PREFIX}/auth/register",
-                "auth_login": f"POST {settings.API_PREFIX}/auth/login",
-                "channels": f"GET/POST {settings.API_PREFIX}/channels",
-                "chat_history": f"GET {settings.API_PREFIX}/chat/messages/{{channel_id}}",
-                "moderate_rest": f"POST {settings.API_PREFIX}/moderate",
-                "feedback": f"POST {settings.API_PREFIX}/feedback",
-                "websocket_chat": "WS /ws/chat",
-            },
-        }
+if os.path.exists(_assets_dir):
+    app.mount("/assets", StaticFiles(directory=_assets_dir), name="assets")
+
+
+@app.get("/", tags=["Root"])
+async def root(request: Request):
+    """
+    Root endpoint:
+    - Serves the compiled React SPA index.html for web browsers (Accept: text/html).
+    - Returns JSON Service status and API link registry for API clients and automated tests.
+    """
+    accept = request.headers.get("accept", "")
+    index_file = os.path.join(_dist_dir, "index.html")
+
+    if "text/html" in accept and os.path.exists(index_file):
+        return FileResponse(index_file)
+
+    return {
+        "service": settings.APP_NAME,
+        "version": settings.APP_VERSION,
+        "docs": "/docs",
+        "health": f"{settings.API_PREFIX}/health",
+        "ready": f"{settings.API_PREFIX}/ready",
+        "endpoints": {
+            "auth_register": f"POST {settings.API_PREFIX}/auth/register",
+            "auth_login": f"POST {settings.API_PREFIX}/auth/login",
+            "channels": f"GET/POST {settings.API_PREFIX}/channels",
+            "chat_history": f"GET {settings.API_PREFIX}/chat/messages/{{channel_id}}",
+            "moderate_rest": f"POST {settings.API_PREFIX}/moderate",
+            "feedback": f"POST {settings.API_PREFIX}/feedback",
+            "websocket_chat": "WS /ws/chat",
+        },
+    }
+
+
+@app.get("/{full_path:path}", include_in_schema=False)
+async def spa_fallback(request: Request, full_path: str):
+    """
+    SPA catch-all fallback: serves existing static files or redirects routes back to index.html.
+    """
+    file_path = os.path.join(_dist_dir, full_path)
+    if os.path.isfile(file_path):
+        return FileResponse(file_path)
+    index_file = os.path.join(_dist_dir, "index.html")
+    if os.path.exists(index_file):
+        return FileResponse(index_file)
+    return JSONResponse(status_code=404, content={"detail": "Not Found"})

@@ -28,7 +28,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -e .
-          pip install pytest pytest-asyncio pytest-timeout httpx pydantic-settings
+          pip install pytest pytest-asyncio pytest-timeout httpx pydantic-settings loguru aiosqlite greenlet
 
       - name: Run Test Suite (43 tests)
         run: |
@@ -74,4 +74,3 @@ jobs:
           file: ./Dockerfile
           push: false
           tags: safechat-gateway:test
-
