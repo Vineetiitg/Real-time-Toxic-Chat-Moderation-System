@@ -16,6 +16,16 @@ import {
 } from 'lucide-react';
 import { SeverityBadge } from '../common/Badge';
 
+
+function getDisplayLanguage(code?: string): string {
+  if (!code) return '';
+  const c = code.toLowerCase();
+  if (c === 'hi-en' || c === 'hinglish') return 'Hinglish';
+  if (c === 'hi' || c === 'hindi') return 'Hindi';
+  if (c === 'en' || c === 'english') return 'English';
+  return '';
+}
+
 interface ChatWindowProps {
   channelId: string;
   currentUserId: string;
@@ -102,7 +112,7 @@ export default function ChatWindow({ channelId, currentUserId, currentUserName }
                   severity: data.severity,
                   categories: data.categories,
                   detectedLanguage: data.detected_language,
-                  suggestion: data.suggestion || '',
+                  suggestion: '', // Never show premature/faded text; wait for final detox rewrite
                   isStreamingSuggestion: true,
                 });
               } else {
@@ -112,7 +122,7 @@ export default function ChatWindow({ channelId, currentUserId, currentUserName }
               }
             }
           } else if (payload.type === 'detox_start') {
-            setInterceptedModal(prev => prev ? { ...prev, isStreamingSuggestion: true } : null);
+            setInterceptedModal(prev => prev ? { ...prev, suggestion: '', isStreamingSuggestion: true } : null);
           } else if (payload.type === 'detox_chunk') {
             setInterceptedModal(prev => prev ? { ...prev, suggestion: prev.suggestion + payload.data.chunk } : null);
           } else if (payload.type === 'detox_end') {
@@ -319,9 +329,9 @@ export default function ChatWindow({ channelId, currentUserId, currentUserName }
                   </h3>
                   <div className="flex items-center gap-2 mt-0.5">
                     <SeverityBadge severity={interceptedModal.severity} />
-                    {interceptedModal.detectedLanguage && (
-                      <span className="text-[10px] text-slate-500">
-                        Detected in {interceptedModal.detectedLanguage}
+                    {getDisplayLanguage(interceptedModal.detectedLanguage) && (
+                      <span className="text-[10px] px-2 py-0.5 bg-amber-100 text-amber-800 rounded-full font-medium">
+                        {getDisplayLanguage(interceptedModal.detectedLanguage)}
                       </span>
                     )}
                   </div>
@@ -352,14 +362,17 @@ export default function ChatWindow({ channelId, currentUserId, currentUserName }
                   <Sparkles className="w-3.5 h-3.5 text-emerald-500" />
                   Intent-Preserving Polite Alternative
                 </div>
-                <p className="text-sm font-medium text-emerald-900 leading-relaxed">
-                  {interceptedModal.suggestion || (
-                    <span className="text-emerald-600 flex items-center gap-2 animate-pulse">
-                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                      Generating rewrite via Gemini 2.5 Flash...
-                    </span>
+                <div className="text-sm font-medium text-emerald-900 leading-relaxed min-h-[24px]">
+                  {interceptedModal.suggestion ? (
+                    <p>{interceptedModal.suggestion}</p>
+                  ) : (
+                    <div className="flex items-center gap-1.5 py-1 text-emerald-500">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-bounce" style={{ animationDelay: '0ms' }} />
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-bounce" style={{ animationDelay: '150ms' }} />
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-bounce" style={{ animationDelay: '300ms' }} />
+                    </div>
                   )}
-                </p>
+                </div>
               </div>
 
               {/* Actions */}
@@ -414,7 +427,7 @@ export default function ChatWindow({ channelId, currentUserId, currentUserName }
               disabled={isChecking}
               placeholder={
                 isChecking
-                  ? '⚡ Evaluating message safety...'
+                  ? 'Evaluating message safety...'
                   : 'Type in English, Hinglish, or Hindi...'
               }
               className="w-full py-3 pl-4 pr-4 bg-slate-100 border border-slate-200 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 rounded-2xl text-sm outline-none transition-all disabled:opacity-60"

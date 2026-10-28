@@ -92,10 +92,12 @@ async def websocket_chat_gateway(
                     logger.error(f"Classification failed: {e}")
                     classification = {"is_toxic": False, "severity": "SAFE", "categories": {}}
 
-            # Immediately send classification results to client
+            # Immediately send classification results to client (strip premature suggestions)
+            clean_classification = dict(classification)
+            clean_classification["suggestion"] = None
             await websocket.send_json({
                 "type": "classification",
-                "data": classification,
+                "data": clean_classification,
             })
 
             # Determine moderation status
