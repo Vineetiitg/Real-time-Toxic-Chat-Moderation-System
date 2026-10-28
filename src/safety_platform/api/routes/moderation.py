@@ -61,7 +61,7 @@ async def moderate_message(payload: ModerateRequest):
     suggestion = ml_res.get("suggestion")
 
     # If toxic and no suggestion was returned by classifier, call arbitration & detoxify
-    if is_toxic and severity in ("MEDIUM", "HIGH") and not suggestion:
+    if is_toxic and severity in ("MEDIUM", "HIGH"):
         roberta_labels = [k for k, v in ml_res.get('categories', {}).items() if v >= 0.4]
         arbitration = await ml_client.arbitrate_and_detoxify(
             text=payload.text,

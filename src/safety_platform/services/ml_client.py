@@ -26,20 +26,35 @@ class MLClientService:
     _TOXIC_PATTERNS = [
         r'\b(bhenchod|behenchod|banchod|bc|bsdk|bhosdike|bhosadike|bhosadi|machod|madarchod|madarchodd|mc)\b',
         r'\b(chutiya|chutiye|chutye|chomu|lukkha|nalayak|kamina|kamine|kamini)\b',
-        r'\b(saale|saala|sale|sala|harami|haramkhor|dalla|randi|suar|kutta|kutte|kutti|bhikari)\b',
+        r'\b(saale|saala|sale|sala|harami|haramkhor|dalla|randi|suar|kutta|kutte|kutti|bhikari|pille)\b',
         r'\b(gadhha|gadha|gadhe|bewakoof|ullu)\b',
         r'\b(fuck|fucking|bitch|cunt|asshole|retard|dickhead|idiot|moron|bastard)\b',
-        r'बहनचोद|मादरचोद|भोसड़ी|हरामी|हरामखोर|चूतिया|बेवकूफ|गधा|नालायक|कमीने|कुत्ता',
-        r'\b(jaan se maar|maar dunga|maar duga|khatam kar dunga|thappad marunga|muh tod dunga|aukat me reh)\b',
+        r'बहनचोद|मादरचोद|भोसड़ी|हरामी|हरामखोर|चूतिया|बेवकूफ|गधा|नालायक|कमीने|कुत्ता|सूअर|दफा',
+        r'\b(jaan se maar|maar dunga|maar duga|khatam kar dunga|thappad marunga|muh tod dunga|aukat me reh|aukat dekh)\b',
+        r'\b(i will (find|kill|destroy|hunt|hurt)|kill you|destroy you|break your face)\b',
+        r'\b(useless person|worthless piece|piece of shit)\b',
+        r'\b(tera baap ka|baap ka raj|dafa ho ja|nikal yahan se)\b',
     ]
     _TOXIC_REGEX = re.compile('|'.join(_TOXIC_PATTERNS), re.IGNORECASE)
+
+    _HINGLISH_WORDS = {
+        "yaar", "bhai", "hai", "hain", "kya", "kyu", "kyun", "kar", "karo", "raha",
+        "rahe", "rahi", "nahi", "nahin", "nhi", "mujhe", "tujhe", "tera", "mera", "yeh",
+        "woh", "kaise", "kaisa", "tha", "the", "thi", "hoga", "apna", "apni", "pehle",
+        "haramkhor", "harami", "chutiya", "chutiye", "chutye", "kamina", "kamine",
+        "nalayak", "saale", "saala", "sale", "sala", "gadhha", "gadha", "gadhe",
+        "bewakoof", "bhenchod", "behenchod", "madarchod", "bhosdike", "aukat", "bakwas",
+        "dafa", "suar", "kutta", "kutte", "pille", "warna", "bura", "chal", "rahein",
+        "shaant", "kripya", "sunein", "baat", "dunga", "khatam", "dimaag", "kharab",
+        "theek", "samjhao", "subah", "milna", "kachra", "kisne", "likha", "raj"
+    }
 
     def __init__(self):
         self.base_url = settings.ML_SERVICE_URL.rstrip("/")
         self.timeout = settings.ML_SERVICE_TIMEOUT_SECONDS
 
     def _apply_hybrid_safety_guard(self, text: str, result: Dict[str, Any]) -> Dict[str, Any]:
-        """Ensure explicit toxic slurs and insults are never falsely classified as safe."""
+        """Ensure explicit toxic slurs and insults are never falsely classified as safe, and sanitize language."""
         if self._TOXIC_REGEX.search(text):
             result["is_toxic"] = True
             result["overall_score"] = max(result.get("overall_score", 0.0), 0.85)
@@ -49,10 +64,19 @@ class MLClientService:
             cats["insult"] = max(cats.get("insult", 0.0), 0.85)
             cats["toxic"] = max(cats.get("toxic", 0.0), 0.85)
             result["categories"] = cats
-            if any('\u0900' <= c <= '\u097F' for c in text):
-                result["detected_language"] = "hi"
-            elif any(w in text.lower() for w in ["haramkhor", "harami", "chutiya", "bhenchod", "saale", "kamina", "nalayak"]):
-                result["detected_language"] = "hi-en"
+
+        # Sanitize detected language: prevent exotic false positives like 'id' (Indonesian) or 'so' (Somali)
+        curr_lang = result.get("detected_language", "en")
+        words = {w.lower().strip(".,!?:;\"'") for w in text.split()}
+
+        if any('\u0900' <= c <= '\u097F' for c in text):
+            result["detected_language"] = "hi"
+        elif bool(words & self._HINGLISH_WORDS):
+            result["detected_language"] = "hi-en"
+        elif curr_lang not in ("en", "hi", "hi-en", "bn", "ta", "te", "kn", "ml", "gu", "pa"):
+            # If langdetect returned an exotic code (e.g. id, so, tl, cy), fallback to en
+            result["detected_language"] = "en"
+
         return result
 
     async def moderate_text(self, text: str, context: Optional[List[str]] = None) -> Dict[str, Any]:

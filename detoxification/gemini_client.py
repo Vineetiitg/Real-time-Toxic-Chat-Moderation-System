@@ -110,10 +110,11 @@ Language: {lang_name}
 
 STRICT LANGUAGE AND REWRITE RULES:
 - The detoxified rewrite MUST be in the exact same language and script as the input.
-- If the input is in Hinglish (Hindi written in Roman / English alphabets, e.g. 'haramkhor', 'tu bewakoof hai'), the rewritten text MUST BE IN NATURAL CONVERSATIONAL HINGLISH using Roman alphabet (e.g. 'Aap kripya theek se aur imandari se pesh aao'). NEVER output Devanagari script for Hinglish, and NEVER output ancient or bizarre Victorian English insults (do NOT use words like 'rascal', 'scoundrel', 'wretch').
-- If the input is in Devanagari Hindi (e.g. 'तुम बेकार हो'), the rewrite must be in Devanagari Hindi.
+- SCRIPT MATCHING: If the input is in Hinglish (Hindi written in Roman / English alphabets, e.g. 'haramkhor', 'bhenchod yahan se dafa ho ja'), the rewritten text MUST BE IN NATURAL CONVERSATIONAL HINGLISH USING ROMAN ALPHABET (e.g. 'Aap kripya yahan se chale jao'). NEVER convert Roman Hinglish into Devanagari script (do NOT write 'कृपया आप यहाँ से चले जाएँ।').
+- If the input is in Devanagari Hindi (e.g. 'तुम बेकार हो', 'सूअर के बच्चे'), the rewrite must be in Devanagari Hindi.
 - If the input is in English, the rewrite must be in modern, natural conversational English.
-- NEVER invent non-existent words or switch to unrelated languages.
+- STRICTLY FORBIDDEN: NEVER respond in Indonesian, Malay, Somali, Swahili, or any foreign language. If the language was mistakenly tagged as another language, ignore that tag and respond in Hinglish (for Roman script Hindi) or English.
+- NEVER invent non-existent words or use archaic Victorian English insults (do NOT use words like 'rascal', 'scoundrel', 'wretch').
 - Keep the "reason" explanation strictly under 20 words.
 - Place "detoxified_text" BEFORE "reason" in your JSON output.
 
