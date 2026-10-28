@@ -115,7 +115,11 @@ class ResponseValidator:
             return False, cleaned, "Output is identical to original toxic text"
 
         # Check 4: Length explosion (LLM hallucinated a long paragraph)
-        if len(cleaned) > max(40, len(original_text) * max_length_multiplier):
+        if len(cleaned) > max(120, len(original_text) * max_length_multiplier):
             return False, cleaned, f"Output too long ({len(cleaned)} chars vs original {len(original_text)})"
+
+        # Check 5: Code or JSON syntax artifacts in rewrite
+        if any(marker in lower_cleaned for marker in ['"is_toxic"', '```', '{"', '":', 'confidence":', 'detoxified_text":']):
+            return False, cleaned, "Output contains code or JSON syntax artifacts"
 
         return True, cleaned, None

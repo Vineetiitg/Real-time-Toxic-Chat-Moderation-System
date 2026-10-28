@@ -47,7 +47,7 @@ class DetoxConfig:
 
     # ── Generation Parameters ─────────────────────────────────────────
     temperature: float = 0.3            # Low temperature for consistent, faithful style transfer
-    max_tokens: int = 150               # Messages in chat are concise
+    max_tokens: int = 500               # Sufficient budget for complete JSON arbitration & detoxified rewrite
     request_timeout_seconds: float = 8.0  # Cap API latency for real-time chat
 
     # ── Retry & Resilience ────────────────────────────────────────────

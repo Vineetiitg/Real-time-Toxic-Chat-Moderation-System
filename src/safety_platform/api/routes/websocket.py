@@ -129,7 +129,7 @@ async def websocket_chat_gateway(
                     classification['severity'] = 'SAFE'
                     suggestion = None
                 else:
-                    suggestion = arbitration.get('detoxified_text') or arbitration.get('suggestion')
+                    suggestion = arbitration.get('detoxified_text') or arbitration.get('detoxified') or arbitration.get('suggestion')
                     severity = arbitration.get('severity', severity)
                     classification['severity'] = severity
 

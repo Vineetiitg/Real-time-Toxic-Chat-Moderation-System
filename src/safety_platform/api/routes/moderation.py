@@ -79,7 +79,7 @@ async def moderate_message(payload: ModerateRequest):
             ml_res['arbitration_override'] = True
             suggestion = None
         else:
-            suggestion = arbitration.get('detoxified_text') or arbitration.get('suggestion')
+            suggestion = arbitration.get('detoxified_text') or arbitration.get('detoxified') or arbitration.get('suggestion')
             severity = arbitration.get('severity', severity)
             ml_res['is_toxic'] = True
             ml_res['severity'] = severity

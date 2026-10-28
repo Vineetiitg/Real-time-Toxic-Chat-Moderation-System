@@ -41,7 +41,7 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str = ""
     GEMINI_MODEL: str = "gemini-1.5-flash"
     GEMINI_BASE_URL: str = ""
-    DETOX_MAX_TOKENS: int = 256
+    DETOX_MAX_TOKENS: int = 500
     REDIS_URL: str = ""
 
     # ── Inference Settings ───────────────────────────────

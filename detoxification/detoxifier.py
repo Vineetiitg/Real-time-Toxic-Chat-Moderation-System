@@ -204,13 +204,16 @@ class Detoxifier:
                     detox_text = res["detoxified_text"]
 
                     if is_toxic:
-                        is_valid, cleaned, _ = self.validator.validate(
+                        is_valid, cleaned, val_reason = self.validator.validate(
                             candidate_text=detox_text,
                             original_text=text,
                             max_length_multiplier=self.cfg.max_length_multiplier,
                         )
                         if is_valid:
                             detox_text = cleaned
+                        else:
+                            logger.warning(f"Arbitration rewrite failed validation ({val_reason}). Scrubbing via offline engine.")
+                            detox_text = self.scrubber.scrub(text, detected_language=lang)
 
                     result = {
                         "original": text,
@@ -218,6 +221,7 @@ class Detoxifier:
                         "severity": res["severity"],
                         "categories": res["active_labels"],
                         "detoxified": detox_text,
+                        "detoxified_text": detox_text,
                         "reason": res.get("reason", ""),
                         "method": "gemini_arbitration",
                         "language": lang,
@@ -240,6 +244,7 @@ class Detoxifier:
             "severity": "MEDIUM" if is_toxic else "SAFE",
             "categories": roberta_labels or [],
             "detoxified": fallback_text,
+            "detoxified_text": fallback_text,
             "reason": "Offline heuristic fallback",
             "method": "intent_preserving_scrubber",
             "language": lang,

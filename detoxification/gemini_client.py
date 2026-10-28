@@ -108,15 +108,24 @@ TASK:
 {context_str}{roberta_hint}MESSAGE TO EVALUATE: "{text}"
 Language: {lang_name}
 
+STRICT LANGUAGE AND REWRITE RULES:
+- The detoxified rewrite MUST be in the exact same language and script as the input.
+- If the input is in Hinglish (Hindi written in Roman / English alphabets, e.g. 'haramkhor', 'tu bewakoof hai'), the rewritten text MUST BE IN NATURAL CONVERSATIONAL HINGLISH using Roman alphabet (e.g. 'Aap kripya theek se aur imandari se pesh aao'). NEVER output Devanagari script for Hinglish, and NEVER output ancient or bizarre Victorian English insults (do NOT use words like 'rascal', 'scoundrel', 'wretch').
+- If the input is in Devanagari Hindi (e.g. 'तुम बेकार हो'), the rewrite must be in Devanagari Hindi.
+- If the input is in English, the rewrite must be in modern, natural conversational English.
+- NEVER invent non-existent words or switch to unrelated languages.
+- Keep the "reason" explanation strictly under 20 words.
+- Place "detoxified_text" BEFORE "reason" in your JSON output.
+
 RESPONSE FORMAT:
-Respond STRICTLY with a valid JSON object with NO surrounding markdown backticks or explanations:
+Respond with ONLY a valid JSON object (no markdown backticks, no explanations outside JSON):
 {{
   "is_toxic": true or false,
   "confidence": 0.0 to 1.0,
   "severity": "SAFE" or "MEDIUM" or "HIGH",
   "active_labels": ["toxic", "insult", ...],
   "detoxified_text": "polite rewrite if toxic, or exact original text if safe",
-  "reason": "short explanation of context and final verdict"
+  "reason": "short explanation under 20 words"
 }}
 """
 
@@ -221,44 +230,73 @@ class GeminiClient:
     ) -> Optional[Dict[str, Any]]:
         """
         Call Gemini to arbitrate classification (safe vs toxic) and provide a detoxified rewrite.
-        Parses structured JSON response.
+        Parses structured JSON response with resilient regex fallbacks.
         """
         prompt = build_arbitration_prompt(text, language, roberta_labels, context)
         raw = await self.generate(prompt)
         if not raw:
             return None
 
-        # Clean JSON from raw text (strip markdown code blocks if any)
+        # Clean markdown code blocks from raw text
         cleaned_json = raw.strip()
-        if cleaned_json.startswith("```json"):
-            cleaned_json = cleaned_json[7:]
-        elif cleaned_json.startswith("```"):
-            cleaned_json = cleaned_json[3:]
-        if cleaned_json.endswith("```"):
-            cleaned_json = cleaned_json[:-3]
+        cleaned_json = re.sub(r"^```(?:json)?\s*", "", cleaned_json, flags=re.IGNORECASE)
+        cleaned_json = re.sub(r"\s*```$", "", cleaned_json)
         cleaned_json = cleaned_json.strip()
 
+        parsed: Optional[Dict[str, Any]] = None
         try:
             parsed = json.loads(cleaned_json)
+        except Exception:
+            # Try extracting { ... } block
+            match = re.search(r"(\{[\s\S]*\})", raw)
+            if match:
+                try:
+                    parsed = json.loads(match.group(1))
+                except Exception:
+                    parsed = None
+
+        if parsed is not None and isinstance(parsed, dict):
             is_toxic = bool(parsed.get("is_toxic", False))
-            return {
-                "is_toxic": is_toxic,
-                "severity": parsed.get("severity", "MEDIUM" if is_toxic else "SAFE"),
-                "confidence": float(parsed.get("confidence", 0.95)),
-                "active_labels": parsed.get("active_labels", []),
-                "detoxified_text": parsed.get("detoxified_text", text),
-                "reason": parsed.get("reason", ""),
-            }
-        except Exception as e:
-            logger.warning(f"Could not parse Gemini arbitration JSON ({e}). Raw response: {raw[:100]}")
-            return {
-                "is_toxic": True,
-                "severity": "MEDIUM",
-                "confidence": 0.8,
-                "active_labels": roberta_labels or ["toxic"],
-                "detoxified_text": raw.strip(),
-                "reason": "Fallback raw text parsing",
-            }
+            detox_text = parsed.get("detoxified_text") or text
+            severity = str(parsed.get("severity", "MEDIUM" if is_toxic else "SAFE"))
+            confidence = float(parsed.get("confidence", 0.95))
+            active_labels = parsed.get("active_labels", roberta_labels or [])
+            reason = str(parsed.get("reason", ""))
+        else:
+            # Resilient regex extraction for partial or malformed responses
+            toxic_match = re.search(r'"is_toxic"\s*:\s*(true|false)', raw, re.IGNORECASE)
+            is_toxic = toxic_match.group(1).lower() == "true" if toxic_match else (bool(roberta_labels) or True)
+
+            detox_match = re.search(r'"detoxified_text"\s*:\s*"([^"\\]*(?:\\.[^"\\]*)*)"', raw)
+            if detox_match:
+                try:
+                    detox_text = json.loads(f'"{detox_match.group(1)}"')
+                except Exception:
+                    detox_text = detox_match.group(1)
+            else:
+                # Guaranteed fallback: NEVER return raw JSON code strings to the user!
+                from detoxification.scrubber import IntentPreservingScrubber
+                detox_text = IntentPreservingScrubber.scrub(text, detected_language=language) if is_toxic else text
+
+            sev_match = re.search(r'"severity"\s*:\s*"([A-Z]+)"', raw)
+            severity = sev_match.group(1) if sev_match else ("MEDIUM" if is_toxic else "SAFE")
+            confidence = 0.85
+            active_labels = roberta_labels or (["toxic"] if is_toxic else [])
+            reason = "Extracted via resilient regex fallback"
+
+        # Final safety sanity check: ensure detox_text never contains code artifacts
+        if detox_text and any(code_marker in detox_text for code_marker in ['"is_toxic"', '```', '{\n', '}\n', '{"']):
+            from detoxification.scrubber import IntentPreservingScrubber
+            detox_text = IntentPreservingScrubber.scrub(text, detected_language=language)
+
+        return {
+            "is_toxic": is_toxic,
+            "severity": severity,
+            "confidence": confidence,
+            "active_labels": active_labels,
+            "detoxified_text": detox_text,
+            "reason": reason,
+        }
 
     async def _generate_openrouter(self, prompt: str) -> Optional[str]:
         """Direct async HTTP call to OpenRouter API (when using OpenRouter keys)."""
