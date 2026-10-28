@@ -34,4 +34,10 @@
   .btn-primary {
     @apply px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl shadow-md transition-all duration-150 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed;
   }
+  .nav-btn-active {
+    @apply w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-[13px] font-semibold bg-indigo-600 text-white shadow-sm transition-all;
+  }
+  .nav-btn-inactive {
+    @apply w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-[13px] font-medium text-slate-400 hover:text-white hover:bg-slate-800/60 transition-all;
+  }
 }

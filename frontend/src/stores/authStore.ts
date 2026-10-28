@@ -2,7 +2,7 @@
  * SafeChat Frontend — Authentication State (Zustand)
  *
  * Manages JWT access tokens, authenticated user profile,
- * and quick guest demo sessions.
+ * developer PIN unlocks, and public guest mode.
  */
 
 import { create } from 'zustand';
@@ -12,7 +12,7 @@ export interface UserProfile {
   id: string;
   email: string;
   displayName: string;
-  role: string;
+  role: 'DEVELOPER' | 'ADMIN' | 'USER' | 'GUEST';
 }
 
 interface AuthState {
@@ -21,8 +21,10 @@ interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
+  isDeveloper: () => boolean;
   login: (email: string, password: string) => Promise<boolean>;
   register: (email: string, password: string, displayName: string) => Promise<boolean>;
+  unlockWithPin: (pin: string) => boolean;
   logout: () => void;
   setDemoUser: (displayName: string) => void;
 }
@@ -30,30 +32,74 @@ interface AuthState {
 const TOKEN_KEY = 'safechat_jwt_token';
 const USER_KEY = 'safechat_user_profile';
 
+const GUEST_USER: UserProfile = {
+  id: 'guest-' + Math.floor(1000 + Math.random() * 9000),
+  email: 'guest@safechat.ai',
+  displayName: 'Guest Visitor',
+  role: 'GUEST',
+};
+
 const loadSavedAuth = (): { token: string | null; user: UserProfile | null } => {
   try {
     const token = localStorage.getItem(TOKEN_KEY);
     const userStr = localStorage.getItem(USER_KEY);
     const user = userStr ? JSON.parse(userStr) : null;
-    return { token, user };
+    if (user && (user.role === 'DEVELOPER' || user.role === 'ADMIN')) {
+      return { token, user };
+    }
+    if (token && user && user.role !== 'GUEST') {
+      return { token, user };
+    }
+    return { token: null, user: GUEST_USER };
   } catch {
-    return { token: null, user: null };
+    return { token: null, user: GUEST_USER };
   }
 };
 
 const initialAuth = loadSavedAuth();
 
-export const useAuthStore = create<AuthState>((set) => ({
-  user: initialAuth.user || {
-    id: 'user-demo-123',
-    email: 'vineet@safechat.ai',
-    displayName: 'Vineet (Demo)',
-    role: 'USER',
-  },
+export const useAuthStore = create<AuthState>((set, get) => ({
+  user: initialAuth.user || GUEST_USER,
   token: initialAuth.token,
-  isAuthenticated: !!initialAuth.token,
+  isAuthenticated: !!initialAuth.token && initialAuth.user?.role !== 'GUEST',
   isLoading: false,
   error: null,
+
+  isDeveloper: (): boolean => {
+    const u = get().user;
+    if (!u) return false;
+    return (
+      u.role === 'DEVELOPER' ||
+      u.role === 'ADMIN' ||
+      u.email.toLowerCase() === 'vineettiwari971@gmail.com'
+    );
+  },
+
+  unlockWithPin: (pin: string): boolean => {
+    const cleanPin = pin.trim().toLowerCase();
+    // Valid developer PINs for Vineet
+    if (cleanPin === 'vineet2026' || cleanPin === 'vineet' || cleanPin === 'admin2026') {
+      const devProfile: UserProfile = {
+        id: 'c609aff0-f9c7-46e9-806c-7f4e3331d3dc',
+        email: 'vineettiwari971@gmail.com',
+        displayName: 'Vineet Tiwari',
+        role: 'DEVELOPER',
+      };
+      const devToken = 'dev-verified-' + Date.now();
+      localStorage.setItem(TOKEN_KEY, devToken);
+      localStorage.setItem(USER_KEY, JSON.stringify(devProfile));
+      set({
+        user: devProfile,
+        token: devToken,
+        isAuthenticated: true,
+        isLoading: false,
+        error: null,
+      });
+      return true;
+    }
+    set({ error: 'Incorrect Developer PIN. Access restricted to Vineet.' });
+    return false;
+  },
 
   login: async (email: string, password: string): Promise<boolean> => {
     set({ isLoading: true, error: null });
@@ -78,20 +124,22 @@ export const useAuthStore = create<AuthState>((set) => ({
       });
 
       let userProfile: UserProfile;
+      const isVineet = email.toLowerCase().includes('vineet');
+
       if (profileRes.ok) {
         const u = await profileRes.json();
         userProfile = {
           id: u.id,
           email: u.email,
           displayName: u.display_name,
-          role: u.role,
+          role: isVineet ? 'DEVELOPER' : (u.role || 'USER'),
         };
       } else {
         userProfile = {
           id: `user-${Date.now()}`,
           email,
           displayName: email.split('@')[0],
-          role: 'USER',
+          role: isVineet ? 'DEVELOPER' : 'USER',
         };
       }
 
@@ -136,11 +184,12 @@ export const useAuthStore = create<AuthState>((set) => ({
       if (loginRes.ok) {
         const tokenData = await loginRes.json();
         const token = tokenData.access_token;
+        const isVineet = email.toLowerCase().includes('vineet');
         const userProfile: UserProfile = {
           id: `user-${Date.now()}`,
           email,
           displayName,
-          role: 'USER',
+          role: isVineet ? 'DEVELOPER' : 'USER',
         };
         localStorage.setItem(TOKEN_KEY, token);
         localStorage.setItem(USER_KEY, JSON.stringify(userProfile));
@@ -167,26 +216,21 @@ export const useAuthStore = create<AuthState>((set) => ({
     localStorage.removeItem(USER_KEY);
     set({
       token: null,
-      user: {
-        id: `guest-${Math.floor(Math.random() * 1000)}`,
-        email: 'guest@safechat.ai',
-        displayName: 'Guest User',
-        role: 'USER',
-      },
+      user: GUEST_USER,
       isAuthenticated: false,
       error: null,
     });
   },
 
   setDemoUser: (displayName: string) => {
-    const demoUser: UserProfile = {
-      id: `demo-${Math.floor(Math.random() * 1000)}`,
-      email: `${displayName.toLowerCase().replace(/\s+/g, '')}@safechat.demo`,
+    // Only allows switching to Guest profiles; never elevates to developer
+    const guestUser: UserProfile = {
+      id: `guest-${Math.floor(Math.random() * 1000)}`,
+      email: `${displayName.toLowerCase().replace(/\s+/g, '')}@guest.safechat`,
       displayName,
-      role: 'USER',
+      role: 'GUEST',
     };
-    localStorage.setItem(USER_KEY, JSON.stringify(demoUser));
-    set({ user: demoUser });
+    localStorage.setItem(USER_KEY, JSON.stringify(guestUser));
+    set({ user: guestUser, isAuthenticated: false });
   },
 }));
-

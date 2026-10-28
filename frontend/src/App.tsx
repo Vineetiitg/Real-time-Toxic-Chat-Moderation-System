@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import ChatWindow from './components/chat/ChatWindow';
 import AdminDashboard from './components/dashboard/AdminDashboard';
+import ModelSandbox from './components/sandbox/ModelSandbox';
+import DeveloperLockGate from './components/auth/DeveloperLockGate';
 import AuthModal from './components/auth/AuthModal';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import Sidebar, { MobileMenuButton } from './components/layout/Sidebar';
@@ -8,11 +10,16 @@ import { useAuthStore } from './stores/authStore';
 import { useChatStore } from './stores/chatStore';
 
 function App() {
-  const [activeTab, setActiveTab] = useState<'chat' | 'dashboard'>('chat');
+  const { user, isDeveloper } = useAuthStore();
+  const devAccess = isDeveloper();
+
+  // Non-developer visitors default to Model Sandbox; Vineet defaults to Chat
+  const [activeTab, setActiveTab] = useState<'sandbox' | 'chat' | 'dashboard'>(() => {
+    return devAccess ? 'chat' : 'sandbox';
+  });
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  const { user } = useAuthStore();
   const { currentChannel, fetchChannels } = useChatStore();
 
   useEffect(() => {
@@ -35,16 +42,38 @@ function App() {
             setMobileOpen={setIsMobileMenuOpen}
           />
 
-          {/* Main Content */}
+          {/* Main Content Area */}
           <div className="flex-1 flex flex-col bg-white overflow-hidden relative">
-            {activeTab === 'chat' ? (
-              <ChatWindow
-                channelId={currentChannel}
-                currentUserId={user?.id || 'demo-user'}
-                currentUserName={user?.displayName || 'Vineet'}
-              />
-            ) : (
-              <AdminDashboard />
+            {activeTab === 'sandbox' && (
+              <ModelSandbox onOpenAuth={() => setIsAuthModalOpen(true)} />
+            )}
+
+            {activeTab === 'chat' && (
+              devAccess ? (
+                <ChatWindow
+                  channelId={currentChannel}
+                  currentUserId={user?.id || 'dev-vineet'}
+                  currentUserName={user?.displayName || 'Vineet Tiwari'}
+                />
+              ) : (
+                <DeveloperLockGate
+                  featureName="Live Moderated Chat"
+                  onUnlock={() => setIsAuthModalOpen(true)}
+                  onGoSandbox={() => setActiveTab('sandbox')}
+                />
+              )
+            )}
+
+            {activeTab === 'dashboard' && (
+              devAccess ? (
+                <AdminDashboard />
+              ) : (
+                <DeveloperLockGate
+                  featureName="Admin Dashboard"
+                  onUnlock={() => setIsAuthModalOpen(true)}
+                  onGoSandbox={() => setActiveTab('sandbox')}
+                />
+              )
             )}
           </div>
         </div>
