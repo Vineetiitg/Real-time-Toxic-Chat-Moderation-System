@@ -48,7 +48,7 @@ const PRESET_PROMPTS = [
   {
     label: 'English Toxicity',
     type: 'toxic',
-    text: 'You are completely useless and should be fired immediately',
+    text: 'You are an absolute idiot and complete piece of trash, shut up',
   },
   {
     label: 'Safe Hinglish Praise',
@@ -163,35 +163,6 @@ export default function ModelSandbox({ onOpenAuth }: ModelSandboxProps) {
       </div>
 
       <div className="p-4 sm:p-6 max-w-4xl w-full mx-auto space-y-6 flex-1">
-        {/* Preset Chips */}
-        <div>
-          <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
-            <Zap className="w-3.5 h-3.5 text-amber-500" />
-            Quick Test Prompts (Click to Evaluate)
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {PRESET_PROMPTS.map((preset) => (
-              <button
-                key={preset.label}
-                onClick={() => handlePresetClick(preset.text)}
-                className={`text-xs px-3 py-1.5 rounded-xl border transition-all text-left flex items-center gap-1.5 ${
-                  preset.type === 'toxic'
-                    ? 'bg-rose-50/70 border-rose-200 text-rose-800 hover:bg-rose-100'
-                    : 'bg-emerald-50/70 border-emerald-200 text-emerald-800 hover:bg-emerald-100'
-                }`}
-              >
-                <span
-                  className={`w-1.5 h-1.5 rounded-full ${
-                    preset.type === 'toxic' ? 'bg-rose-500' : 'bg-emerald-500'
-                  }`}
-                />
-                <span className="font-semibold">{preset.label}:</span>
-                <span className="text-slate-600 truncate max-w-[200px]">{preset.text}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
         {/* Input Box */}
         <div className="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-sm space-y-3">
           <label className="block text-xs font-bold text-slate-700">
@@ -349,6 +320,35 @@ export default function ModelSandbox({ onOpenAuth }: ModelSandboxProps) {
           </div>
         )}
 
+        {/* Preset Chips (Quick Test Prompts) */}
+        <div className="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-sm space-y-3">
+          <div className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+            <Zap className="w-3.5 h-3.5 text-amber-500" />
+            Quick Test Prompts (Click to Evaluate)
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {PRESET_PROMPTS.map((preset) => (
+              <button
+                key={preset.label}
+                onClick={() => handlePresetClick(preset.text)}
+                className={`text-xs px-3 py-1.5 rounded-xl border transition-all text-left flex items-center gap-1.5 ${
+                  preset.type === 'toxic'
+                    ? 'bg-rose-50/70 border-rose-200 text-rose-800 hover:bg-rose-100'
+                    : 'bg-emerald-50/70 border-emerald-200 text-emerald-800 hover:bg-emerald-100'
+                }`}
+              >
+                <span
+                  className={`w-1.5 h-1.5 rounded-full ${
+                    preset.type === 'toxic' ? 'bg-rose-500' : 'bg-emerald-500'
+                  }`}
+                />
+                <span className="font-semibold">{preset.label}:</span>
+                <span className="text-slate-600 truncate max-w-[220px]">{preset.text}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Developer Lock Info Banner */}
         <div className="p-4 bg-indigo-50/60 border border-indigo-100 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-indigo-950">
           <div className="flex items-start gap-2.5">
@@ -374,3 +374,4 @@ export default function ModelSandbox({ onOpenAuth }: ModelSandboxProps) {
     </div>
   );
 }
+
